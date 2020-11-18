@@ -1,0 +1,41 @@
+version: '3.8'
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  data:
+    name: ecs-practice.data
+
+services:
+  app:
+    container_name: ecs-practice.auth.app
+    build:
+      context: ../
+      dockerfile: ./docker/app/Dockerfile
+    image: ecs-practice/app
+    volumes:
+      - data:/var/www
+
+  nginx:
+    container_name: ecs-practice.auth.nginx
+    build: ./nginx
+    image: ecs-practice/nginx
+    ports:
+      - 3010:80
+    volumes:
+      - data:/var/www
+    depends_on:
+      - php-fpm
+    networks:
+      - backend
+
+  php-fpm:
+    container_name: ecs-practice.auth.php-fpm
+    build: ./php-fpm
+    image: ecs-practice/php-fpm
+    volumes:
+      - data:/var/www
+    networks:
+      - backend

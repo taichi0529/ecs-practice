@@ -1,0 +1,17 @@
+version: '3.8'
+
+networks:
+  shop.backend:
+    driver: bridge
+
+services:
+  node:
+    container_name: ecs-practice.shop.node
+    build:
+      context: ../
+      dockerfile: ./docker/node/Dockerfile
+    image: ecs-practice/node
+    ports:
+      - 3000:3000
+    networks:
+      - shop.backend
