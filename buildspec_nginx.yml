@@ -41,7 +41,7 @@ phases:
       # Dockerfileが更新されていたらイメージをビルドしてECRへpush、されていなければlatestをpull
       - |
         set -e
-        IMGDEF_JSON=${IMGDEF_JSON}$(printf '{"name":"%s", "imageUri": "%s"},'nginx ${ECR_IMAGE_URI}:${COMMIT_HASH})
+        IMGDEF_JSON=${IMGDEF_JSON}$(printf '{"name":"%s", "imageUri": "%s"},' nginx ${ECR_IMAGE_URI}:${COMMIT_HASH})
         docker build -t ${ECR_IMAGE_URI} ./
         docker tag ${ECR_IMAGE_URI} ${ECR_IMAGE_URI}:latest
         docker tag ${ECR_IMAGE_URI} ${ECR_IMAGE_URI}:${COMMIT_HASH}

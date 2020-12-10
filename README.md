@@ -124,6 +124,7 @@ ECSの`Task Definitions`のページで
          - `Container name`をnginx
          - `Image`をECRにプッシュしたイメージ名。`xxxxxxxxxxx.dkr.ecr.ap-northeast-1.amazonaws.com/ecs-handson/nginx:1`
          - `Memory Limits`を128
+         - `Port mappings`で`Add port mapping`して80と80を入れます。
 1. `Create`を押す
 
 これでできあがりです。
@@ -131,8 +132,12 @@ ECSの`Task Definitions`のページで
 
 ### 7. サービス作成
 
+ロードバランサと連動させてみます。
+ロードバランサの作成をして紐付けます。
+
 ### 8. index.htmlを更新してみる。
 index.htmlの中身を変更してイメージを作成する。
+ターゲットグループをみてどのように切り替わるか確認する。
 
 ```bash
 cd nginx
@@ -185,7 +190,6 @@ CPUに負荷をかけてオートスケーリングさせるの面倒くさい�
 実際に触ってみる（資料は後でつくります）
 
 
-## CI/CD
 
 ## k8sとの対比
 
