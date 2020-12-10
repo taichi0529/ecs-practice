@@ -1,0 +1,61 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      docker: 19
+  pre_build:
+    commands:
+      ##### dockerリポジトリへのログイン ###################################
+      # ECRのリポジトリにログイン
+      - $(aws ecr get-login --no-include-email --region ${AWS_REGION})
+
+      ##### 環境変数の定義 ###################################
+      # APP_NAME, APP_ENV はcodeBuildの環境変数を設定している。
+      # envディレクティブで設定していないのはスクリプトで定義している部分があるため。
+      # AWSのアカウントIDを$CODEBUILD_BUILD_ARNから取得
+      - OLDIFS=$IFS && IFS=':' && set -- ${CODEBUILD_BUILD_ARN} && AWS_ACCOUNT_ID=$5 && IFS=$OLDIFS
+      - ROOT_DIR=`pwd`
+      - ECR_IMAGE_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/ecs-handson/nginx
+      # gitのコミットハッシュを使ってdockerイメージ
+      - COMMIT_HASH=`echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-9`
+      - PROJECT_DIR=${ROOT_DIR}/nginx
+      # 下記のDockerfileが変更されていたらイメージをビルドしてECRへpushする
+      - IMGDEF_JSON_FILE=${PROJECT_DIR}/imagedefinitions.json
+      # 環境変数初期値表示
+      - |
+        echo ">>> ENVs ->"
+        echo ">>>     AWS_ACCOUNT_ID: ${AWS_ACCOUNT_ID}"
+        echo ">>>     ROOT_DIR: ${ROOT_DIR}"
+        echo ">>>     ECR_IMAGE_URI: ${ECR_IMAGE_URI}"
+        echo ">>>     COMMIT_HASH: ${COMMIT_HASH}"
+        echo ">>>     PROJECT_DIR: ${PROJECT_DIR}"
+        echo ">>>     IMGDEF_JSON_FILE: ${IMGDEF_JSON_FILE}"
+
+  build:
+    commands:
+      - IMGDEF_JSON=""
+      - cd ${PROJECT_DIR}; echo ">>> [dir] `pwd`"
+      - CACHE_DIR_FOR_DOCKER=${CACHE_DIR}/docker
+      - mkdir -p ${CACHE_DIR_FOR_DOCKER} 2>/dev/null
+      ##### dockerイメージのビルド ###################################
+      # Dockerfileが更新されていたらイメージをビルドしてECRへpush、されていなければlatestをpull
+      - |
+        set -e
+        IMGDEF_JSON=${IMGDEF_JSON}$(printf '{"name":"%s", "imageUri": "%s"},'nginx ${ECR_IMAGE_URI}:${COMMIT_HASH})
+        docker build -t ${ECR_IMAGE_URI} ./
+        docker tag ${ECR_IMAGE_URI} ${ECR_IMAGE_URI}:latest
+        docker tag ${ECR_IMAGE_URI} ${ECR_IMAGE_URI}:${COMMIT_HASH}
+        docker push ${ECR_IMAGE_URI}:latest
+        docker push ${ECR_IMAGE_URI}:${COMMIT_HASH}
+
+      ##### imagedefinitions.jsonの書き込み ###################################
+      - IMGDEF_JSON="["${IMGDEF_JSON:0:${#IMGDEF_JSON}-1}"]"
+      - echo ${IMGDEF_JSON}
+      - echo ${IMGDEF_JSON} > ${IMGDEF_JSON_FILE}
+
+artifacts:
+  files:
+    - '**/*'
+  discard-paths: no
+  base-directory: ${PROJECT_DIR}
+
