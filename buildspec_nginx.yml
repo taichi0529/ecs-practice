@@ -35,8 +35,6 @@ phases:
     commands:
       - IMGDEF_JSON=""
       - cd ${PROJECT_DIR}; echo ">>> [dir] `pwd`"
-      - CACHE_DIR_FOR_DOCKER=${CACHE_DIR}/docker
-      - mkdir -p ${CACHE_DIR_FOR_DOCKER} 2>/dev/null
       ##### dockerイメージのビルド ###################################
       # Dockerfileが更新されていたらイメージをビルドしてECRへpush、されていなければlatestをpull
       - |
