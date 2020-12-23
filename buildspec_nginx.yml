@@ -4,22 +4,24 @@ phases:
     runtime-versions:
       docker: 19
   pre_build:
+    # まずは必要な環境変数などをビルドに必要な情報を整えていきます。
     commands:
       ##### dockerリポジトリへのログイン ###################################
       # ECRのリポジトリにログイン
       - $(aws ecr get-login --no-include-email --region ${AWS_REGION})
+      # docker hubへログインしたりもできます。
 
       ##### 環境変数の定義 ###################################
-      # APP_NAME, APP_ENV はcodeBuildの環境変数を設定している。
-      # envディレクティブで設定していないのはスクリプトで定義している部分があるため。
+      # APP_NAME, APP_ENV はcodeBuildのデフォルトの環境変数を使います。ドキュメント参照
       # AWSのアカウントIDを$CODEBUILD_BUILD_ARNから取得
       - OLDIFS=$IFS && IFS=':' && set -- ${CODEBUILD_BUILD_ARN} && AWS_ACCOUNT_ID=$5 && IFS=$OLDIFS
       - ROOT_DIR=`pwd`
+      # ECR上のdocker imageのURI
       - ECR_IMAGE_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/ecs-handson/nginx
-      # gitのコミットハッシュを使ってdockerイメージ
+      # gitのコミットハッシュを使ってdockerイメージのURLにつけるタグを作成する
       - COMMIT_HASH=`echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-9`
       - PROJECT_DIR=${ROOT_DIR}/nginx
-      # 下記のDockerfileが変更されていたらイメージをビルドしてECRへpushする
+      # タスク定義を更新するためのファイル。
       - IMGDEF_JSON_FILE=${PROJECT_DIR}/imagedefinitions.json
       # 環境変数初期値表示
       - |
@@ -36,7 +38,7 @@ phases:
       - IMGDEF_JSON=""
       - cd ${PROJECT_DIR}; echo ">>> [dir] `pwd`"
       ##### dockerイメージのビルド ###################################
-      # Dockerfileが更新されていたらイメージをビルドしてECRへpush、されていなければlatestをpull
+      # イメージをビルドしてECRへpush。その際にタスク定義更新用のimagedefinitions.jsonの中身も作っている。
       - |
         set -e
         IMGDEF_JSON=${IMGDEF_JSON}$(printf '{"name":"%s", "imageUri": "%s"},' nginx ${ECR_IMAGE_URI}:${COMMIT_HASH})
@@ -50,10 +52,10 @@ phases:
       - IMGDEF_JSON="["${IMGDEF_JSON:0:${#IMGDEF_JSON}-1}"]"
       - echo ${IMGDEF_JSON}
       - echo ${IMGDEF_JSON} > ${IMGDEF_JSON_FILE}
-
+# deploy stageへ渡すファイルの定義。今回はimagedefinitions.jsonだけ渡せばいいのだけれど大したサイズではないのでディレクトリごｔ渡してしまっています。
 artifacts:
   files:
     - '**/*'
   discard-paths: no
   base-directory: ${PROJECT_DIR}
-
+  
